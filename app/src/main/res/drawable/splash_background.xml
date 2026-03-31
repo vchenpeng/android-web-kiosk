@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 第一层：你的全屏图片（优先使用 centerCrop 让它铺满屏幕） -->
     <item>
-        <bitmap
-            android:src="@drawable/welcome"   <!-- ← 改成你的图片文件名 -->
-            android:gravity="center_crop" />           <!-- 关键：铺满屏幕，保持比例裁剪 -->
+        <bitmap android:src="@drawable/welcome" android:gravity="center_crop" />
     </item>
 
 </layer-list>
