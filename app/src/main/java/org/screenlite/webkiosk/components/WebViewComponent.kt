@@ -25,6 +25,8 @@ import org.screenlite.webkiosk.data.KioskSettingsFactory
 import org.screenlite.webkiosk.data.Rotation
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
+
+import android.view.View
 import android.webkit.JavascriptInterface
 
 private const val TAG = "WebViewComponent"
