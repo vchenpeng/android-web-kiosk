@@ -2,13 +2,8 @@ name: Build & Release Signed APK
 
 on:
   push:
-    branches:
-      - main
-      - master
-  pull_request:
-    branches:
-      - main
-      - master
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
