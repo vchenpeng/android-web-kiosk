@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import org.screenlite.webkiosk.ui.theme.*
 
 @Composable
@@ -70,7 +71,8 @@ fun SettingsField(
                     style = MaterialTheme.typography.labelMedium,
                     color = if (isError) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 4.dp),
+                    textAlign = TextAlign.Start
                 )
             }
         } else {
