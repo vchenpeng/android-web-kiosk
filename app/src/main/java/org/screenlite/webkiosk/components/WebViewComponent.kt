@@ -64,6 +64,37 @@ fun WebViewComponent(
         )
     }
 
+    val splashRemoved = remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(10_000L)  // 10 秒
+        if (!splashRemoved.value) {
+            Log.d(TAG, "10s timeout - auto hiding splash screen")
+            removeSplashScreen(activity)
+            splashRemoved.value = true
+            isLoading = false
+            hasError = false
+            hasLoadedPage = true
+        }
+    }
+    
+    val kioskInterface = remember {
+        object {
+            @JavascriptInterface
+            fun hideSplash() {
+                (context as? Activity)?.runOnUiThread {
+                    if (!splashRemoved.value) {
+                        Log.d(TAG, "JS called hideSplash()")
+                        removeSplashScreen(activity)
+                        splashRemoved.value = true
+                        isLoading = false
+                        hasError = false
+                        hasLoadedPage = true
+                    }
+                }
+            }
+        }
+    }
+
     val configuration = LocalConfiguration.current
     LaunchedEffect(configuration.orientation) {
         val orientation =
@@ -132,12 +163,21 @@ fun WebViewComponent(
             cm.unregisterNetworkCallback(callback)
         }
     }
+
     key(retryTrigger) {
         AndroidView(
             modifier = modifier,
             factory = { ctx ->
                 Log.d(TAG, "Creating WebView (rotation=$rotation)")
-                webViewManager.createWebView(rotation)
+                val webView = webViewManager.createWebView(rotation)
+
+                webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                webView.visibility = View.INVISIBLE
+
+                webView.settings.javaScriptEnabled = true
+                webView.addJavascriptInterface(kioskInterface, "jyt")
+
+                webView
             },
             update = { webView ->
                 if (webView.url != url) {
@@ -158,7 +198,7 @@ fun WebViewComponent(
             contentAlignment = Alignment.Center
         ) {
             Log.w(TAG, "Showing connection error UI")
-            Text("Connection error\nRetrying...", color = Color.White)
+            Text("Connection error, Retrying...", color = Color.White)
         }
 
         isLoading -> Box(
@@ -171,4 +211,11 @@ fun WebViewComponent(
             Text("Loading...", color = Color.White)
         }
     }
+}
+
+private fun removeSplashScreen(activity: Activity) {
+    activity.window.setBackgroundDrawable(null)   // 关键：移除 welcome.png
+    
+    // 可选：加一点淡入效果（更平滑）
+    // activity.window.decorView.animate().alpha(1f).setDuration(300).start()
 }
