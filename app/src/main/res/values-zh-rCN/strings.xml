@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name">Screenlite 网页信息亭</string>
+    <string name="app_name">协作机器人</string>
 
     <!-- Settings Screen -->
     <string name="settings_title">信息亭设置</string>
     <string name="settings_kiosk_url_label">信息亭网址</string>
     <string name="settings_kiosk_url_desc">这是在信息亭模式下显示的唯一网页。</string>
-    <string name="settings_kiosk_url_placeholder">https://screenlite.org</string>
+    <string name="settings_kiosk_url_placeholder">http://192.168.6.100</string>
 
     <string name="settings_check_interval_label">应用检查间隔（秒）</string>
     <string name="settings_check_interval_desc">服务检查信息亭是否正在运行的频率。如果关闭，将自动重启。</string>
