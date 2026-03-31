@@ -2,9 +2,9 @@
     <string name="app_name">协作机器人</string>
 
     <!-- Settings Screen -->
-    <string name="settings_title">信息亭设置</string>
-    <string name="settings_kiosk_url_label">信息亭网址</string>
-    <string name="settings_kiosk_url_desc">这是在信息亭模式下显示的唯一网页。</string>
+    <string name="settings_title">系统设置</string>
+    <string name="settings_kiosk_url_label">启动网址</string>
+    <string name="settings_kiosk_url_desc">这是在应用启动时访问的网址</string>
     <string name="settings_kiosk_url_placeholder">http://192.168.6.100</string>
 
     <string name="settings_check_interval_label">应用检查间隔（秒）</string>
