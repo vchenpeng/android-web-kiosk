@@ -1,8 +1,18 @@
 <resources>
+
+    <!-- 1. 专门的启动主题（Splash Theme） -->
+    <style name="Theme.ScreenliteWebKiosk.Splash" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@drawable/splash_background</item>   <!-- 你的 welcome 背景 -->
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- 2. 正常使用的 App 主题（去掉 windowBackground） -->
     <style name="Theme.ScreenliteWebKiosk" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
-
-        <item name="android:windowBackground">@drawable/splash_background</item>
         <item name="android:windowFullscreen">true</item>
+        <!-- 不要在这里放 windowBackground，避免和系统 Splash 冲突 -->
     </style>
+
 </resources>
