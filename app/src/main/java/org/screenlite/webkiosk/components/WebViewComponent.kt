@@ -69,7 +69,7 @@ fun WebViewComponent(
 
     val splashRemoved = remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(10_000L)  // 10 秒
+        delay(15_000L)  // 10 秒
         if (!splashRemoved.value) {
             Log.d(TAG, "10s timeout - auto hiding splash screen")
             removeSplashScreen(activity)
@@ -191,28 +191,6 @@ fun WebViewComponent(
                     webView.reload()
                 }
             })
-    }
-
-    when {
-        hasError -> Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black),
-            contentAlignment = Alignment.Center
-        ) {
-            Log.w(TAG, "Showing connection error UI")
-            Text("Connection error, Retrying...", color = Color.White)
-        }
-
-        isLoading -> Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black),
-            contentAlignment = Alignment.Center
-        ) {
-            Log.d(TAG, "Showing loading UI")
-            Text("Loading...", color = Color.White)
-        }
     }
 }
 
