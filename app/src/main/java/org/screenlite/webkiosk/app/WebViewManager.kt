@@ -19,7 +19,10 @@ class WebViewManager(
     private val onPageLoading: (Boolean) -> Unit
 ) {
     private var currentWebView: WebView? = null
+    private var speechSynthesisBridge: SpeechSynthesisBridge? = null
+
     fun createWebView(rotation: Rotation = Rotation.ROTATION_0): WebView {
+        speechSynthesisBridge?.destroy()
         val webView = RotatedWebView(context).apply {
             layoutParams = android.view.ViewGroup.LayoutParams(
                 android.view.ViewGroup.LayoutParams.MATCH_PARENT,
@@ -36,8 +39,22 @@ class WebViewManager(
             setupWebViewListeners()
         }
 
+        speechSynthesisBridge = SpeechSynthesisBridge(context) { currentWebView }
+        webView.addJavascriptInterface(speechSynthesisBridge!!, "AndroidSpeechSynthesis")
+        injectSpeechSynthesisPolyfill(webView)
+
         currentWebView = webView
         return webView
+    }
+
+    fun destroy() {
+        speechSynthesisBridge?.destroy()
+        speechSynthesisBridge = null
+        currentWebView = null
+    }
+
+    private fun injectSpeechSynthesisPolyfill(webView: WebView) {
+        webView.evaluateJavascript(SpeechSynthesisPolyfill.SCRIPT, null)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -85,12 +102,14 @@ class WebViewManager(
         webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                injectSpeechSynthesisPolyfill(view)
                 view.visibility = View.INVISIBLE
                 onPageLoading(true)
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
                 super.onPageFinished(view, url)
+                injectSpeechSynthesisPolyfill(view)
                 ViewportMetaInjector.inject(view)
                 view.postDelayed({
                     view.visibility = View.VISIBLE

@@ -164,6 +164,7 @@ fun WebViewComponent(
         onDispose {
             Log.d(TAG, "Unregistering network callback")
             cm.unregisterNetworkCallback(callback)
+            webViewManager.destroy()
         }
     }
 
