@@ -5,8 +5,11 @@
         <color android:color="@color/splash_screen_background" />
     </item>
 
+    <!-- fill: 拉伸铺满整个窗口，与 Compose 层 ContentScale.Crop 效果互补 -->
     <item>
-        <bitmap android:src="@drawable/welcome" android:gravity="center" />
+        <bitmap
+            android:src="@drawable/welcome"
+            android:gravity="fill" />
     </item>
 
 </layer-list>
