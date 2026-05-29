@@ -24,16 +24,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import org.screenlite.webkiosk.app.FullScreenHelper
 import org.screenlite.webkiosk.app.IdleBrightnessController
 import org.screenlite.webkiosk.app.NotificationPermissionHelper
+import org.screenlite.webkiosk.app.SplashController
 import org.screenlite.webkiosk.app.StayOnTopServiceStarter
 import org.screenlite.webkiosk.app.TapUnlockHandler
+import org.screenlite.webkiosk.components.KioskSplashOverlay
 import org.screenlite.webkiosk.components.MainScreen
 import org.screenlite.webkiosk.components.TouchKioskInputOverlay
 import org.screenlite.webkiosk.components.TvKioskInputOverlay
@@ -44,8 +46,12 @@ import org.screenlite.webkiosk.ui.theme.isTvDevice
 class MainActivity : ComponentActivity() {
     private lateinit var unlockHandler: TapUnlockHandler
     lateinit var idleController: IdleBrightnessController
+    lateinit var splashController: SplashController
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        splashController = SplashController()
+        installSplashScreen().setKeepOnScreenCondition { splashController.keepOnScreen }
         super.onCreate(savedInstanceState)
 
         FullScreenHelper.enableImmersiveMode(this.window)
@@ -63,6 +69,10 @@ class MainActivity : ComponentActivity() {
                 AppContent(unlockHandler, this)
             }
         }
+    }
+
+    fun dismissSplash() {
+        splashController.dismiss()
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -86,10 +96,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppContent(unlockHandler: TapUnlockHandler, activity: Activity) {
+fun AppContent(unlockHandler: TapUnlockHandler, activity: MainActivity) {
     val context = LocalContext.current
-    val idleController = remember { (activity as MainActivity).idleController }
+    val idleController = remember { activity.idleController }
     val isIdleMode by idleController.isIdleMode.collectAsState()
+    val splashVisible by activity.splashController.visible
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -108,11 +119,16 @@ fun AppContent(unlockHandler: TapUnlockHandler, activity: Activity) {
     }
 
     val isTv = isTvDevice()
+    val dismissSplash = remember(activity) { { activity.dismissSplash() } }
 
-    Box(Modifier.fillMaxSize().background(Color.White)) {
-        MainScreen(activity = activity, modifier = Modifier.fillMaxSize())
+    Box(Modifier.fillMaxSize()) {
+        MainScreen(
+            activity = activity,
+            modifier = Modifier.fillMaxSize(),
+            onDismissSplash = dismissSplash,
+        )
 
-        if(isTv) {
+        if (isTv) {
             TvKioskInputOverlay(onTap = {
                 idleController.onUserInteraction()
                 unlockHandler.registerTap()
@@ -124,13 +140,17 @@ fun AppContent(unlockHandler: TapUnlockHandler, activity: Activity) {
             )
         }
 
+        if (splashVisible) {
+            KioskSplashOverlay()
+        }
+
         val idleFocusRequester = remember { FocusRequester() }
 
         if (isIdleMode) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
+                    .background(androidx.compose.ui.graphics.Color.Black)
                     .clickable {
                         idleController.onUserInteraction()
                     }

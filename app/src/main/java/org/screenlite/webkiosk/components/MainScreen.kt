@@ -7,7 +7,11 @@ import androidx.compose.ui.platform.LocalContext
 import org.screenlite.webkiosk.data.KioskSettingsFactory
 
 @Composable
-fun MainScreen(activity: Activity, modifier: Modifier) {
+fun MainScreen(
+    activity: Activity,
+    modifier: Modifier,
+    onDismissSplash: () -> Unit,
+) {
     val context = LocalContext.current
     var url by remember { mutableStateOf("about:blank") }
     val kioskSettings = remember { KioskSettingsFactory.get(context) }
@@ -19,6 +23,11 @@ fun MainScreen(activity: Activity, modifier: Modifier) {
     }
 
     key(url) {
-        WebViewComponent(url = url, activity = activity, modifier)
+        WebViewComponent(
+            url = url,
+            activity = activity,
+            modifier = modifier,
+            onDismissSplash = onDismissSplash,
+        )
     }
 }

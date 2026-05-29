@@ -2,40 +2,42 @@ package org.screenlite.webkiosk.components
 
 import android.app.Activity
 import android.content.Context
+import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
 import android.util.Log
-import org.screenlite.webkiosk.app.WebViewManager
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.viewinterop.AndroidView
-import kotlinx.coroutines.delay
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import org.screenlite.webkiosk.data.KioskSettingsFactory
-import org.screenlite.webkiosk.data.Rotation
-import androidx.compose.ui.platform.LocalConfiguration
-import android.content.res.Configuration
-
 import android.view.View
 import android.webkit.JavascriptInterface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
+import org.screenlite.webkiosk.app.WebViewManager
+import org.screenlite.webkiosk.data.KioskSettingsFactory
+import org.screenlite.webkiosk.data.Rotation
 
 private const val TAG = "WebViewComponent"
+private const val SPLASH_TIMEOUT_MS = 15_000L
 
 @Composable
 fun WebViewComponent(
     url: String,
     activity: Activity,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDismissSplash: () -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -45,6 +47,17 @@ fun WebViewComponent(
     var rotation: Rotation by remember { mutableStateOf(Rotation.ROTATION_0) }
     var retryCount by remember { mutableIntStateOf(0) }
     var retryTrigger by remember { mutableIntStateOf(0) }
+    var splashDismissed by remember { mutableStateOf(false) }
+
+    val dismissSplash = remember(onDismissSplash) {
+        {
+            if (!splashDismissed) {
+                Log.d(TAG, "Dismissing splash screen")
+                splashDismissed = true
+                onDismissSplash()
+            }
+        }
+    }
 
     val webViewManager = remember {
         WebViewManager(
@@ -67,32 +80,33 @@ fun WebViewComponent(
         )
     }
 
-    val splashRemoved = remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(15_000L)  // 10 秒
-        if (!splashRemoved.value) {
-            Log.d(TAG, "10s timeout - auto hiding splash screen")
-            removeSplashScreen(activity)
-            splashRemoved.value = true
+        delay(SPLASH_TIMEOUT_MS)
+        if (!splashDismissed) {
+            Log.d(TAG, "Splash timeout - auto hiding splash screen")
+            dismissSplash()
             isLoading = false
             hasError = false
             hasLoadedPage = true
         }
     }
-    
-    val kioskInterface = remember {
+
+    LaunchedEffect(hasLoadedPage) {
+        if (hasLoadedPage && !splashDismissed) {
+            dismissSplash()
+        }
+    }
+
+    val kioskInterface = remember(dismissSplash) {
         object {
             @JavascriptInterface
             fun hideSplash() {
                 (context as? Activity)?.runOnUiThread {
-                    if (!splashRemoved.value) {
-                        Log.d(TAG, "JS called hideSplash()")
-                        removeSplashScreen(activity)
-                        splashRemoved.value = true
-                        isLoading = false
-                        hasError = false
-                        hasLoadedPage = true
-                    }
+                    Log.d(TAG, "JS called hideSplash()")
+                    dismissSplash()
+                    isLoading = false
+                    hasError = false
+                    hasLoadedPage = true
                 }
             }
         }
@@ -171,7 +185,7 @@ fun WebViewComponent(
     key(retryTrigger) {
         AndroidView(
             modifier = modifier,
-            factory = { ctx ->
+            factory = {
                 Log.d(TAG, "Creating WebView (rotation=$rotation)")
                 val webView = webViewManager.createWebView(rotation)
 
@@ -193,11 +207,4 @@ fun WebViewComponent(
                 }
             })
     }
-}
-
-private fun removeSplashScreen(activity: Activity) {
-    activity.window.setBackgroundDrawable(null)   // 关键：移除 welcome.png
-    
-    // 可选：加一点淡入效果（更平滑）
-    // activity.window.decorView.animate().alpha(1f).setDuration(300).start()
 }
