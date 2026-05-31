@@ -110,7 +110,9 @@ fun SettingsScreen() {
             Spacer(Modifier.height(32.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 48.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End)
             ) {
                 FocusableButton(
