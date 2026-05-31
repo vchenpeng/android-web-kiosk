@@ -5,7 +5,7 @@
     <string name="settings_title">Kiosk Settings</string>
     <string name="settings_kiosk_url_label">Kiosk URL</string>
     <string name="settings_kiosk_url_desc">This is the only webpage shown in kiosk mode.</string>
-    <string name="settings_kiosk_url_placeholder">https://screenlite.org</string>
+    <string name="settings_kiosk_url_placeholder">http://192.168.57.101</string>
 
     <string name="settings_check_interval_label">App Check Interval (seconds)</string>
     <string name="settings_check_interval_desc">How often the service verifies the kiosk is active. If closed, it restarts automatically.</string>

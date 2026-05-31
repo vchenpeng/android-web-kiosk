@@ -30,7 +30,7 @@ class DataStoreKioskSettings(private val context: Context) : KioskSettings {
 
     override fun getStartUrl(): Flow<String> {
         return context.dataStore.data.map { prefs ->
-            prefs[keyStartUrl] ?: "http://192.168.6.100"
+            prefs[keyStartUrl] ?: "http://192.168.57.101"
         }
     }
 

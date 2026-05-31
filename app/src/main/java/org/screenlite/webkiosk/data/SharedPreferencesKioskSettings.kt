@@ -36,11 +36,11 @@ class SharedPreferencesKioskSettings(context: Context) : KioskSettings {
         val key = "start_url"
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
             if (changedKey == key) {
-                trySend(prefs.getString(key, "https://screenlite.org") ?: "https://screenlite.org")
+                trySend(prefs.getString(key, "http://192.168.57.101") ?: "http://192.168.57.101")
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
-        trySend(prefs.getString(key, "https://screenlite.org") ?: "https://screenlite.org")
+        trySend(prefs.getString(key, "http://192.168.57.101") ?: "http://192.168.57.101")
 
         awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }.distinctUntilChanged()
