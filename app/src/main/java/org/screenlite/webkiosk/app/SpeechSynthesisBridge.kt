@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
@@ -69,7 +70,21 @@ class SpeechSynthesisBridge(
 
         webView.post {
             if (!ready.get()) {
-                notifyJs("onError", id, "engine-not-ready:status=${initStatus ?: -1},engine=${currentEngineName()}")
+                val status = initStatus ?: -1
+                val statusLabel = initStatusLabel(status)
+                if (status == TextToSpeech.ERROR) {
+                    notifyJs(
+                        "onError",
+                        id,
+                        "engine-init-failed:status=$status($statusLabel),engine=${currentEngineName()}"
+                    )
+                } else {
+                    notifyJs(
+                        "onError",
+                        id,
+                        "engine-not-ready:status=$status($statusLabel),engine=${currentEngineName()}"
+                    )
+                }
                 return@post
             }
 
@@ -171,11 +186,31 @@ class SpeechSynthesisBridge(
         val streamVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: -1
         val streamMaxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: -1
         val isMusicActive = audioManager?.isMusicActive ?: false
+        val status = initStatus ?: -1
+        val statusLabel = initStatusLabel(status)
+        val configuredDefaultEngine = Settings.Secure.getString(
+            appContext.contentResolver,
+            "tts_default_synth"
+        ) ?: "unknown"
+
+        val availableEngines = JSONArray().apply {
+            (engine?.engines ?: emptyList()).forEach { item ->
+                put(
+                    JSONObject()
+                        .put("name", item.name)
+                        .put("label", item.label?.toString() ?: "")
+                        .put("system", item.system)
+                )
+            }
+        }
 
         return JSONObject()
             .put("ready", ready.get())
-            .put("initStatus", initStatus ?: -1)
+            .put("initStatus", status)
+            .put("initStatusLabel", statusLabel)
             .put("engineName", engine?.defaultEngine ?: "unknown-engine")
+            .put("configuredDefaultEngine", configuredDefaultEngine)
+            .put("availableEngines", availableEngines)
             .put("defaultLocale", Locale.getDefault().toLanguageTag())
             .put("streamMusicVolume", streamVolume)
             .put("streamMusicMaxVolume", streamMaxVolume)
@@ -206,6 +241,14 @@ class SpeechSynthesisBridge(
 
     private fun currentEngineName(): String {
         return tts?.defaultEngine ?: "unknown-engine"
+    }
+
+    private fun initStatusLabel(status: Int): String {
+        return when (status) {
+            TextToSpeech.SUCCESS -> "SUCCESS"
+            TextToSpeech.ERROR -> "ERROR"
+            else -> "UNKNOWN"
+        }
     }
 
     companion object {
