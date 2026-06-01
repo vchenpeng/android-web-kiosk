@@ -93,10 +93,10 @@ class SharedPreferencesKioskSettings(context: Context) : KioskSettings {
 
     override fun getIdleBrightness(): Flow<Int> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
-            if (changedKey == keyIdleBrightness) trySend(prefs.getInt(keyIdleBrightness, 0))
+            if (changedKey == keyIdleBrightness) trySend(prefs.getInt(keyIdleBrightness, 1))
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
-        trySend(prefs.getInt(keyIdleBrightness, 0))
+        trySend(prefs.getInt(keyIdleBrightness, 1))
         awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }.distinctUntilChanged()
 

@@ -77,7 +77,7 @@ class DataStoreKioskSettings(private val context: Context) : KioskSettings {
     }
 
     override fun getIdleBrightness(): Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[keyIdleBrightness] ?: 0
+        prefs[keyIdleBrightness] ?: 1
     }
 
     override suspend fun setIdleBrightness(brightness: Int) {
