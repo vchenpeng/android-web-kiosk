@@ -8,6 +8,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
@@ -30,7 +31,8 @@ import org.screenlite.webkiosk.data.KioskSettingsFactory
 import org.screenlite.webkiosk.data.Rotation
 
 private const val TAG = "WebViewComponent"
-private const val SPLASH_TIMEOUT_MS = 15_000L
+private const val SPLASH_TIMEOUT_MS = 10_000L
+private const val MIN_SPLASH_DISPLAY_MS = 3_000L
 
 @Composable
 fun WebViewComponent(
@@ -48,6 +50,8 @@ fun WebViewComponent(
     var retryCount by remember { mutableIntStateOf(0) }
     var retryTrigger by remember { mutableIntStateOf(0) }
     var splashDismissed by remember { mutableStateOf(false) }
+    var splashDismissRequested by remember { mutableStateOf(false) }
+    val splashShownAtMs = remember { SystemClock.elapsedRealtime() }
 
     val dismissSplash = remember(onDismissSplash) {
         {
@@ -56,6 +60,26 @@ fun WebViewComponent(
                 splashDismissed = true
                 onDismissSplash()
             }
+        }
+    }
+
+    val requestDismissSplash = remember {
+        {
+            if (!splashDismissRequested) {
+                splashDismissRequested = true
+            }
+        }
+    }
+
+    LaunchedEffect(splashDismissRequested, splashDismissed) {
+        if (splashDismissRequested && !splashDismissed) {
+            val elapsed = SystemClock.elapsedRealtime() - splashShownAtMs
+            val remaining = (MIN_SPLASH_DISPLAY_MS - elapsed).coerceAtLeast(0L)
+            if (remaining > 0) {
+                Log.d(TAG, "Splash minimum duration not met, delaying dismiss by ${remaining}ms")
+                delay(remaining)
+            }
+            dismissSplash()
         }
     }
 
@@ -72,10 +96,11 @@ fun WebViewComponent(
             onPageLoading = { loading ->
                 isLoading = loading
                 Log.d(TAG, "Page loading=$loading")
-                if (!loading && !hasError) {
-                    hasLoadedPage = true
-                    Log.d(TAG, "Page loaded successfully")
-                }
+            },
+            onPageReady = {
+                hasLoadedPage = true
+                hasError = false
+                Log.d(TAG, "Page loaded successfully")
             }
         )
     }
@@ -84,16 +109,13 @@ fun WebViewComponent(
         delay(SPLASH_TIMEOUT_MS)
         if (!splashDismissed) {
             Log.d(TAG, "Splash timeout - auto hiding splash screen")
-            dismissSplash()
-            isLoading = false
-            hasError = false
-            hasLoadedPage = true
+            requestDismissSplash()
         }
     }
 
     LaunchedEffect(hasLoadedPage) {
         if (hasLoadedPage && !splashDismissed) {
-            dismissSplash()
+            requestDismissSplash()
         }
     }
 
@@ -103,7 +125,7 @@ fun WebViewComponent(
             fun hideSplash() {
                 (context as? Activity)?.runOnUiThread {
                     Log.d(TAG, "JS called hideSplash()")
-                    dismissSplash()
+                    requestDismissSplash()
                     isLoading = false
                     hasError = false
                     hasLoadedPage = true

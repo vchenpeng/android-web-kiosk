@@ -16,7 +16,8 @@ import org.screenlite.webkiosk.data.Rotation
 class WebViewManager(
     private val context: Context,
     private val onError: (Boolean) -> Unit,
-    private val onPageLoading: (Boolean) -> Unit
+    private val onPageLoading: (Boolean) -> Unit,
+    private val onPageReady: () -> Unit
 ) {
     private var currentWebView: WebView? = null
     private var speechSynthesisBridge: SpeechSynthesisBridge? = null
@@ -100,8 +101,11 @@ class WebViewManager(
 
     private fun WebView.setupWebViewListeners() {
         webViewClient = object : WebViewClient() {
+            private var mainFrameFailed = false
+
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                mainFrameFailed = false
                 injectSpeechSynthesisPolyfill(view)
                 view.visibility = View.INVISIBLE
                 onPageLoading(true)
@@ -114,6 +118,9 @@ class WebViewManager(
                 view.postDelayed({
                     view.visibility = View.VISIBLE
                     onPageLoading(false)
+                    if (!mainFrameFailed) {
+                        onPageReady()
+                    }
                 }, 1000)
             }
 
@@ -121,16 +128,18 @@ class WebViewManager(
             @Deprecated("Deprecated in API 23")
             override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
                 Log.e("WebViewManager", "Legacy page failed: $failingUrl, code=$errorCode, desc=$description")
-                onPageLoading(false)
+                mainFrameFailed = true
                 onError(true)
+                onPageLoading(false)
                 super.onReceivedError(view, errorCode, description, failingUrl)
             }
 
             @RequiresApi(Build.VERSION_CODES.M)
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 if (request.isForMainFrame) {
-                    onPageLoading(false)
+                    mainFrameFailed = true
                     onError(true)
+                    onPageLoading(false)
                     Log.e(
                         "WebViewManager",
                         "Main page failed: ${request.url}, code=${error.errorCode}, desc=${error.description}"
