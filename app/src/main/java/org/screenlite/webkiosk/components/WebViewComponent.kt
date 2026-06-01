@@ -2,6 +2,7 @@ package org.screenlite.webkiosk.components
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.Network
@@ -29,6 +30,7 @@ import kotlinx.coroutines.delay
 import org.screenlite.webkiosk.app.WebViewManager
 import org.screenlite.webkiosk.data.KioskSettingsFactory
 import org.screenlite.webkiosk.data.Rotation
+import org.screenlite.webkiosk.service.StayOnTopService
 
 private const val TAG = "WebViewComponent"
 private const val SPLASH_TIMEOUT_MS = 10_000L
@@ -129,6 +131,24 @@ fun WebViewComponent(
                     isLoading = false
                     hasError = false
                     hasLoadedPage = true
+                }
+            }
+
+            @JavascriptInterface
+            fun exitApp() {
+                (context as? Activity)?.runOnUiThread {
+                    Log.d(TAG, "JS called exitApp()")
+                    try {
+                        context.stopService(Intent(context, StayOnTopService::class.java))
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to stop StayOnTopService before exit", e)
+                    }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        (context as? Activity)?.finishAndRemoveTask()
+                    } else {
+                        (context as? Activity)?.finishAffinity()
+                    }
                 }
             }
         }
