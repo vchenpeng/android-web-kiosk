@@ -1,6 +1,7 @@
 package org.screenlite.webkiosk.app
 
 import android.content.Context
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -20,9 +21,12 @@ class SpeechSynthesisBridge(
     private val appContext = context.applicationContext
     private var tts: TextToSpeech? = null
     private val ready = AtomicBoolean(false)
+    @Volatile
+    private var initStatus: Int? = null
 
     init {
         tts = TextToSpeech(appContext) { status ->
+            initStatus = status
             if (status == TextToSpeech.SUCCESS) {
                 ready.set(true)
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -36,11 +40,11 @@ class SpeechSynthesisBridge(
 
                     @Deprecated("Deprecated in Java")
                     override fun onError(utteranceId: String?) {
-                        notifyJs("onError", utteranceId, "synthesis-failed")
+                        notifyJs("onError", utteranceId, "synthesis-failed:legacy")
                     }
 
                     override fun onError(utteranceId: String?, errorCode: Int) {
-                        notifyJs("onError", utteranceId, "synthesis-failed")
+                        notifyJs("onError", utteranceId, "synthesis-failed:$errorCode")
                     }
                 })
                 Log.d(TAG, "TextToSpeech initialized")
@@ -52,10 +56,31 @@ class SpeechSynthesisBridge(
 
     @JavascriptInterface
     fun speak(id: String, text: String, lang: String, rate: Float, pitch: Float, volume: Float) {
-        val engine = tts ?: return
-        webViewProvider()?.post {
+        val engine = tts
+        if (engine == null) {
+            notifyJs("onError", id, "engine-unavailable")
+            return
+        }
+        val webView = webViewProvider()
+        if (webView == null) {
+            Log.e(TAG, "WebView unavailable while speaking. id=$id")
+            return
+        }
+
+        webView.post {
             if (!ready.get()) {
-                notifyJs("onError", id, "not-allowed")
+                notifyJs("onError", id, "engine-not-ready:status=${initStatus ?: -1},engine=${currentEngineName()}")
+                return@post
+            }
+
+            if (text.isBlank()) {
+                notifyJs("onError", id, "empty-text")
+                return@post
+            }
+
+            val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            if (audioManager != null && audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) {
+                notifyJs("onError", id, "audio-muted")
                 return@post
             }
 
@@ -65,7 +90,7 @@ class SpeechSynthesisBridge(
                     TextToSpeech.LANG_MISSING_DATA,
                     TextToSpeech.LANG_NOT_SUPPORTED -> {
                         Log.w(TAG, "Language not available offline: $lang")
-                        notifyJs("onError", id, "language-unavailable")
+                        notifyJs("onError", id, "language-unavailable:$lang")
                         return@post
                     }
                 }
@@ -78,9 +103,19 @@ class SpeechSynthesisBridge(
                 putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume.coerceIn(0f, 1f))
             }
 
-            val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, id)
-            if (result == TextToSpeech.ERROR) {
-                notifyJs("onError", id, "synthesis-failed")
+            try {
+                val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, id)
+                if (result == TextToSpeech.ERROR) {
+                    notifyJs("onError", id, "speak-returned-error:engine=${currentEngineName()}")
+                } else {
+                    Log.d(
+                        TAG,
+                        "Queued TTS id=$id lang=$lang engine=${currentEngineName()} volume=${volume.coerceIn(0f, 1f)}"
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Native speak exception id=$id", e)
+                notifyJs("onError", id, "native-exception:${e.javaClass.simpleName}")
             }
         }
     }
@@ -129,6 +164,25 @@ class SpeechSynthesisBridge(
         return array.toString()
     }
 
+    @JavascriptInterface
+    fun getTtsDebugInfo(): String {
+        val engine = tts
+        val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val streamVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: -1
+        val streamMaxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: -1
+        val isMusicActive = audioManager?.isMusicActive ?: false
+
+        return JSONObject()
+            .put("ready", ready.get())
+            .put("initStatus", initStatus ?: -1)
+            .put("engineName", engine?.defaultEngine ?: "unknown-engine")
+            .put("defaultLocale", Locale.getDefault().toLanguageTag())
+            .put("streamMusicVolume", streamVolume)
+            .put("streamMusicMaxVolume", streamMaxVolume)
+            .put("isMusicActive", isMusicActive)
+            .toString()
+    }
+
     fun destroy() {
         tts?.stop()
         tts?.shutdown()
@@ -148,6 +202,10 @@ class SpeechSynthesisBridge(
         webView.post {
             webView.evaluateJavascript(script, null)
         }
+    }
+
+    private fun currentEngineName(): String {
+        return tts?.defaultEngine ?: "unknown-engine"
     }
 
     companion object {
