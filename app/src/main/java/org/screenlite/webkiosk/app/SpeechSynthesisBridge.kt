@@ -24,35 +24,10 @@ class SpeechSynthesisBridge(
     private val ready = AtomicBoolean(false)
     @Volatile
     private var initStatus: Int? = null
+    private val initAttemptHistory = mutableListOf<String>()
 
     init {
-        tts = TextToSpeech(appContext) { status ->
-            initStatus = status
-            if (status == TextToSpeech.SUCCESS) {
-                ready.set(true)
-                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {
-                        notifyJs("onStart", utteranceId, null)
-                    }
-
-                    override fun onDone(utteranceId: String?) {
-                        notifyJs("onEnd", utteranceId, null)
-                    }
-
-                    @Deprecated("Deprecated in Java")
-                    override fun onError(utteranceId: String?) {
-                        notifyJs("onError", utteranceId, "synthesis-failed:legacy")
-                    }
-
-                    override fun onError(utteranceId: String?, errorCode: Int) {
-                        notifyJs("onError", utteranceId, "synthesis-failed:$errorCode")
-                    }
-                })
-                Log.d(TAG, "TextToSpeech initialized")
-            } else {
-                Log.e(TAG, "TextToSpeech initialization failed: status=$status")
-            }
-        }
+        initializeTtsEngine()
     }
 
     @JavascriptInterface
@@ -202,6 +177,9 @@ class SpeechSynthesisBridge(
                 )
             }
         }
+        val initAttempts = JSONArray().apply {
+            initAttemptHistory.forEach { put(it) }
+        }
 
         return JSONObject()
             .put("ready", ready.get())
@@ -210,6 +188,7 @@ class SpeechSynthesisBridge(
             .put("engineName", engine?.defaultEngine ?: "unknown-engine")
             .put("configuredDefaultEngine", configuredDefaultEngine)
             .put("availableEngines", availableEngines)
+            .put("initAttempts", initAttempts)
             .put("defaultLocale", Locale.getDefault().toLanguageTag())
             .put("streamMusicVolume", streamVolume)
             .put("streamMusicMaxVolume", streamMaxVolume)
@@ -238,6 +217,95 @@ class SpeechSynthesisBridge(
         }
     }
 
+    private fun initializeTtsEngine() {
+        ready.set(false)
+        initStatus = null
+        initAttemptHistory.clear()
+
+        val configuredDefaultEngine = Settings.Secure.getString(
+            appContext.contentResolver,
+            "tts_default_synth"
+        )
+
+        val candidates = listOf(
+            configuredDefaultEngine?.takeIf { it.isNotBlank() },
+            GOOGLE_TTS_ENGINE,
+            null
+        ).distinct()
+
+        tryInitCandidate(candidates, 0)
+    }
+
+    private fun tryInitCandidate(candidates: List<String?>, index: Int) {
+        if (index >= candidates.size) {
+            initStatus = TextToSpeech.ERROR
+            ready.set(false)
+            tts = null
+            Log.e(TAG, "All TTS init candidates failed: $initAttemptHistory")
+            return
+        }
+
+        val requestedEngine = candidates[index]
+        val requestedLabel = requestedEngine ?: "system-default"
+        initAttemptHistory.add(requestedLabel)
+
+        var localTts: TextToSpeech? = null
+        val instance = if (requestedEngine != null) {
+            TextToSpeech(appContext, { status ->
+                onInitResult(status, localTts, requestedEngine, candidates, index)
+            }, requestedEngine)
+        } else {
+            TextToSpeech(appContext, { status ->
+                onInitResult(status, localTts, null, candidates, index)
+            })
+        }
+        localTts = instance
+    }
+
+    private fun onInitResult(
+        status: Int,
+        instance: TextToSpeech?,
+        requestedEngine: String?,
+        candidates: List<String?>,
+        index: Int
+    ) {
+        initStatus = status
+        if (status == TextToSpeech.SUCCESS && instance != null) {
+            tts?.shutdown()
+            tts = instance
+            ready.set(true)
+            attachProgressListener(instance)
+            Log.d(TAG, "TextToSpeech initialized. requested=${requestedEngine ?: "system-default"}")
+            return
+        }
+
+        instance?.shutdown()
+        ready.set(false)
+        Log.e(TAG, "TTS init failed. requested=${requestedEngine ?: "system-default"}, status=$status")
+        tryInitCandidate(candidates, index + 1)
+    }
+
+    private fun attachProgressListener(engine: TextToSpeech) {
+        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                notifyJs("onStart", utteranceId, null)
+            }
+
+            override fun onDone(utteranceId: String?) {
+                notifyJs("onEnd", utteranceId, null)
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) {
+                notifyJs("onError", utteranceId, "synthesis-failed:legacy")
+            }
+
+            override fun onError(utteranceId: String?, errorCode: Int) {
+                notifyJs("onError", utteranceId, "synthesis-failed:$errorCode")
+            }
+        })
+    }
+
     private fun currentEngineName(): String {
         return tts?.defaultEngine ?: "unknown-engine"
     }
@@ -252,5 +320,6 @@ class SpeechSynthesisBridge(
 
     companion object {
         private const val TAG = "SpeechSynthesisBridge"
+        private const val GOOGLE_TTS_ENGINE = "com.google.android.tts"
     }
 }
