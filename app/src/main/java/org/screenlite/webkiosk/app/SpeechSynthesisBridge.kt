@@ -199,7 +199,6 @@ class SpeechSynthesisBridge(
                     JSONObject()
                         .put("name", item.name)
                         .put("label", item.label?.toString() ?: "")
-                        .put("system", item.system)
                 )
             }
         }
