@@ -49,8 +49,8 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           SAFE_VERSION=${VERSION//./-}
-          mv app/build/outputs/apk/release/app-release.apk screenlite-web-kiosk-$SAFE_VERSION.apk
-          echo "apk_name=screenlite-web-kiosk-$SAFE_VERSION.apk" >> $GITHUB_OUTPUT
+          mv app/build/outputs/apk/release/app-release.apk JYT-Robot-$SAFE_VERSION.apk
+          echo "apk_name=JYT-Robot-$SAFE_VERSION.apk" >> $GITHUB_OUTPUT
 
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
@@ -64,10 +64,10 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           SAFE_VERSION=${VERSION//./-}
-          APK_NAME="screenlite-web-kiosk-$SAFE_VERSION.apk"
+          APK_NAME="JYT-Robot-$SAFE_VERSION.apk"
           RELEASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/$APK_NAME"
 
-          sed -i "s#https://github.com/${GITHUB_REPOSITORY}/releases/download/.*/screenlite-web-kiosk-.*\.apk#$RELEASE_URL#" README.md
+          sed -i "s#https://github.com/${GITHUB_REPOSITORY}/releases/download/.*/JYT-Robot-.*\.apk#$RELEASE_URL#" README.md
 
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
