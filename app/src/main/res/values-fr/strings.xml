@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Screenlite Web Kiosk</string>
+    <string name="app_name">Cobot</string>
 
     <!-- Settings Screen -->
     <string name="settings_title">Paramètres du kiosque</string>
