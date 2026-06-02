@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.screenlite.webkiosk.app.WebViewManager
 import org.screenlite.webkiosk.data.KioskSettingsFactory
 import org.screenlite.webkiosk.data.Rotation
@@ -44,6 +46,7 @@ fun WebViewComponent(
     onDismissSplash: () -> Unit,
 ) {
     val context = LocalContext.current
+    val kioskSettings = remember { KioskSettingsFactory.get(context) }
 
     var isLoading by remember { mutableStateOf(true) }
     var hasError by remember { mutableStateOf(false) }
@@ -151,6 +154,36 @@ fun WebViewComponent(
                     }
                 }
             }
+
+            @JavascriptInterface
+            fun getEntryUrl(): String {
+                return try {
+                    runBlocking { kioskSettings.getStartUrl().first() }
+                } catch (e: Exception) {
+                    Log.e(TAG, "getEntryUrl() failed", e)
+                    ""
+                }
+            }
+
+            @JavascriptInterface
+            fun setEntryUrl(url: String): Boolean {
+                val normalized = url.trim()
+                if (normalized.isBlank()) {
+                    Log.w(TAG, "setEntryUrl() rejected: empty url")
+                    return false
+                }
+
+                return try {
+                    runBlocking {
+                        kioskSettings.setStartUrl(normalized)
+                    }
+                    Log.d(TAG, "setEntryUrl() success: $normalized")
+                    true
+                } catch (e: Exception) {
+                    Log.e(TAG, "setEntryUrl() failed: $normalized", e)
+                    false
+                }
+            }
         }
     }
 
@@ -165,7 +198,6 @@ fun WebViewComponent(
     }
 
     LaunchedEffect(Unit) {
-        val kioskSettings = KioskSettingsFactory.get(context)
         kioskSettings.getRotation().collect { newRotation ->
             Log.d(TAG, "Rotation updated: $newRotation")
             rotation = newRotation
@@ -235,7 +267,7 @@ fun WebViewComponent(
                 webView.visibility = View.INVISIBLE
 
                 webView.settings.javaScriptEnabled = true
-                webView.addJavascriptInterface(kioskInterface, "jyt")
+                webView.addJavascriptInterface(kioskInterface, "NativeBridge")
 
                 webView
             },
