@@ -9,7 +9,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "org.screenlite.webkiosk"
+        applicationId = "com.jianyitong.robot"
         minSdk = 22
         targetSdk = 36
         versionCode = 11
