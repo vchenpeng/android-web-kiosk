@@ -30,4 +30,12 @@
     <string name="settings_active_brightness_desc">设备使用时的亮度级别。100 = 最高。</string>
 
     <string name="settings_invalid">请输入有效值</string>
+
+    <string name="settings_clear_cache_label">网页缓存</string>
+    <string name="settings_clear_cache_desc">清除已缓存的页面、Cookie 和本地存储，并从服务器重新加载页面。</string>
+    <string name="settings_clear_cache_button">清除缓存</string>
+    <string name="settings_clear_cache_dialog_title">清除网页缓存？</string>
+    <string name="settings_clear_cache_dialog_message">将清除已缓存的页面、Cookie 和网站存储数据，Kiosk 页面会从服务器重新加载。</string>
+    <string name="settings_clear_cache_confirm">清除</string>
+    <string name="settings_clear_cache_success">缓存已清除，正在重新加载页面…</string>
 </resources>

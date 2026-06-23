@@ -14,6 +14,7 @@ class SharedPreferencesKioskSettings(context: Context) : KioskSettings {
     private val keyIdleTimeout = "idle_timeout"
     private val keyIdleBrightness = "idle_brightness"
     private val keyActiveBrightness = "active_brightness"
+    private val keyCacheClearNonce = "cache_clear_nonce"
 
     override fun getCheckInterval(): Flow<Long> = callbackFlow {
         val key = "check_interval"
@@ -115,5 +116,20 @@ class SharedPreferencesKioskSettings(context: Context) : KioskSettings {
 
     override suspend fun setActiveBrightness(brightness: Int) {
         prefs.edit { putInt(keyActiveBrightness, brightness.coerceIn(0, 100)) }
+    }
+
+    override fun getCacheClearNonce(): Flow<Long> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
+            if (changedKey == keyCacheClearNonce) {
+                trySend(prefs.getLong(keyCacheClearNonce, 0L))
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        trySend(prefs.getLong(keyCacheClearNonce, 0L))
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
+
+    override suspend fun requestCacheClear() {
+        prefs.edit { putLong(keyCacheClearNonce, System.currentTimeMillis()) }
     }
 }

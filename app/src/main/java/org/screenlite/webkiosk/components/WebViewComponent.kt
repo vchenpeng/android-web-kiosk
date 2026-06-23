@@ -29,6 +29,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.screenlite.webkiosk.app.WebViewCacheCleaner
 import org.screenlite.webkiosk.app.WebViewManager
 import org.screenlite.webkiosk.data.KioskSettingsFactory
 import org.screenlite.webkiosk.data.Rotation
@@ -54,6 +55,8 @@ fun WebViewComponent(
     var rotation: Rotation by remember { mutableStateOf(Rotation.ROTATION_0) }
     var retryCount by remember { mutableIntStateOf(0) }
     var retryTrigger by remember { mutableIntStateOf(0) }
+    var cacheClearTrigger by remember { mutableIntStateOf(0) }
+    var lastCacheClearNonce by remember { mutableLongStateOf(-1L) }
     var splashDismissed by remember { mutableStateOf(false) }
     var splashDismissRequested by remember { mutableStateOf(false) }
     val splashShownAtMs = remember { SystemClock.elapsedRealtime() }
@@ -205,6 +208,23 @@ fun WebViewComponent(
         }
     }
 
+    LaunchedEffect(Unit) {
+        kioskSettings.getCacheClearNonce().collect { nonce ->
+            if (lastCacheClearNonce == -1L) {
+                lastCacheClearNonce = nonce
+                return@collect
+            }
+            if (nonce > 0L && nonce != lastCacheClearNonce) {
+                lastCacheClearNonce = nonce
+                Log.d(TAG, "Cache clear requested (nonce=$nonce)")
+                WebViewCacheCleaner.clearAll(context)
+                hasLoadedPage = false
+                hasError = false
+                cacheClearTrigger++
+            }
+        }
+    }
+
     LaunchedEffect(hasError, retryTrigger) {
         if (hasError && !hasLoadedPage) {
             retryCount++
@@ -256,11 +276,11 @@ fun WebViewComponent(
         }
     }
 
-    key(retryTrigger) {
+    key(retryTrigger, cacheClearTrigger) {
         AndroidView(
             modifier = modifier,
             factory = {
-                Log.d(TAG, "Creating WebView (rotation=$rotation)")
+                Log.d(TAG, "Creating WebView (rotation=$rotation, cacheClear=$cacheClearTrigger)")
                 val webView = webViewManager.createWebView(rotation)
 
                 webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
@@ -274,10 +294,10 @@ fun WebViewComponent(
             update = { webView ->
                 if (webView.url != url) {
                     Log.d(TAG, "Loading new URL: $url")
-                    webView.loadUrl(url)
+                    webViewManager.loadUrlBypassingCache(webView, url)
                 } else if (retryTrigger > 0 && !hasLoadedPage) {
                     Log.d(TAG, "Retry triggered, reloading WebView")
-                    webView.reload()
+                    webViewManager.reloadBypassingCache(webView, url)
                 }
             })
     }

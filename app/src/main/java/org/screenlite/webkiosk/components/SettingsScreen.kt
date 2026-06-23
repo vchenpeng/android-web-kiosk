@@ -38,6 +38,10 @@ fun SettingsScreen() {
     var idleTimeoutError by remember { mutableStateOf<String?>(null) }
     var idleBrightnessError by remember { mutableStateOf<String?>(null) }
     var activeBrightnessError by remember { mutableStateOf<String?>(null) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
+    var cacheClearedMessage by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val tabs = listOf("General", "Display", "Brightness")
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -51,7 +55,39 @@ fun SettingsScreen() {
         activeBrightness = kioskSettings.getActiveBrightness().first().toString()
     }
 
+    LaunchedEffect(cacheClearedMessage) {
+        if (cacheClearedMessage) {
+            snackbarHostState.showSnackbar(context.getString(R.string.settings_clear_cache_success))
+            cacheClearedMessage = false
+        }
+    }
+
+    if (showClearCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheDialog = false },
+            title = { Text(stringResource(R.string.settings_clear_cache_dialog_title)) },
+            text = { Text(stringResource(R.string.settings_clear_cache_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showClearCacheDialog = false
+                    (context as? ComponentActivity)?.lifecycleScope?.launch {
+                        kioskSettings.requestCacheClear()
+                        cacheClearedMessage = true
+                    }
+                }) {
+                    Text(stringResource(R.string.settings_clear_cache_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheDialog = false }) {
+                    Text(stringResource(R.string.button_cancel))
+                }
+            }
+        )
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineLarge) },
@@ -85,7 +121,8 @@ fun SettingsScreen() {
                     checkIntervalSeconds = checkIntervalSeconds,
                     onCheckIntervalChange = { checkIntervalSeconds = it },
                     checkIntervalError = checkIntervalError,
-                    onCheckIntervalErrorChange = { checkIntervalError = it }
+                    onCheckIntervalErrorChange = { checkIntervalError = it },
+                    onClearCacheClick = { showClearCacheDialog = true }
                 )
                 1 -> DisplaySettingsTab(
                     rotation = rotation,
@@ -167,7 +204,8 @@ fun GeneralSettingsTab(
     checkIntervalSeconds: String,
     onCheckIntervalChange: (String) -> Unit,
     checkIntervalError: String?,
-    onCheckIntervalErrorChange: (String?) -> Unit
+    onCheckIntervalErrorChange: (String?) -> Unit,
+    onClearCacheClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -202,6 +240,25 @@ fun GeneralSettingsTab(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = checkIntervalError != null,
             supportingText = checkIntervalError ?: stringResource(R.string.settings_check_interval_supporting)
+        )
+
+        Spacer(Modifier.height(32.dp))
+
+        Text(
+            text = stringResource(R.string.settings_clear_cache_label),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.settings_clear_cache_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        FocusableButton(
+            text = stringResource(R.string.settings_clear_cache_button),
+            onClick = onClearCacheClick,
+            background = MaterialTheme.colorScheme.error,
         )
     }
 }

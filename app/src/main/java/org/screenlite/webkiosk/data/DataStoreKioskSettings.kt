@@ -15,6 +15,7 @@ class DataStoreKioskSettings(private val context: Context) : KioskSettings {
     private val keyIdleTimeout = longPreferencesKey("idle_timeout")
     private val keyIdleBrightness = intPreferencesKey("idle_brightness")
     private val keyActiveBrightness = intPreferencesKey("active_brightness")
+    private val keyCacheClearNonce = longPreferencesKey("cache_clear_nonce")
 
     override fun getCheckInterval(): Flow<Long> {
         return context.dataStore.data.map { prefs ->
@@ -90,5 +91,15 @@ class DataStoreKioskSettings(private val context: Context) : KioskSettings {
 
     override suspend fun setActiveBrightness(brightness: Int) {
         context.dataStore.edit { prefs -> prefs[keyActiveBrightness] = brightness.coerceIn(0, 100) }
+    }
+
+    override fun getCacheClearNonce(): Flow<Long> = context.dataStore.data.map { prefs ->
+        prefs[keyCacheClearNonce] ?: 0L
+    }
+
+    override suspend fun requestCacheClear() {
+        context.dataStore.edit { prefs ->
+            prefs[keyCacheClearNonce] = System.currentTimeMillis()
+        }
     }
 }

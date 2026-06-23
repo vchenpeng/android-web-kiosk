@@ -99,6 +99,22 @@ class WebViewManager(
         }
     }
 
+    fun loadUrlBypassingCache(webView: WebView, url: String) {
+        webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        webView.loadUrl(url)
+        webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
+    }
+
+    fun reloadBypassingCache(webView: WebView, url: String) {
+        webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        if (webView.url.isNullOrBlank()) {
+            webView.loadUrl(url)
+        } else {
+            webView.reload()
+        }
+        webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
+    }
+
     private fun WebView.setupWebViewListeners() {
         webViewClient = object : WebViewClient() {
             private var mainFrameFailed = false
