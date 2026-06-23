@@ -64,7 +64,7 @@ fun WebViewComponent(
     var retryTrigger by remember { mutableIntStateOf(0) }
     var cacheClearTrigger by remember { mutableIntStateOf(0) }
     var lastCacheClearNonce by remember { mutableStateOf(-1L) }
-    var pendingCacheClear by remember { mutableStateOf(false) }
+    var pendingCacheReload by remember { mutableStateOf(false) }
     var splashDismissed by remember { mutableStateOf(false) }
     var splashDismissRequested by remember { mutableStateOf(false) }
     val splashShownAtMs = remember { SystemClock.elapsedRealtime() }
@@ -242,14 +242,15 @@ fun WebViewComponent(
             if (nonce > 0L && nonce != lastCacheClearNonce) {
                 lastCacheClearNonce = nonce
                 Log.d(TAG, "Cache clear requested (nonce=$nonce)")
+                WebViewCacheCleaner.clearAll(context)
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                    WebViewCacheCleaner.clearAll(context)
+                    Log.d(TAG, "Foreground reload after cache clear")
                     hasLoadedPage = false
                     hasError = false
                     cacheClearTrigger++
                 } else {
-                    Log.d(TAG, "Activity not in foreground, deferring cache clear until resume")
-                    pendingCacheClear = true
+                    Log.d(TAG, "Cache cleared, deferring reload until resume")
+                    pendingCacheReload = true
                 }
             }
         }
@@ -260,10 +261,9 @@ fun WebViewComponent(
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
                     webViewManager.onResume()
-                    if (pendingCacheClear) {
-                        Log.d(TAG, "Applying deferred cache clear on resume")
-                        pendingCacheClear = false
-                        WebViewCacheCleaner.clearAll(context)
+                    if (pendingCacheReload) {
+                        Log.d(TAG, "Applying deferred reload after cache clear")
+                        pendingCacheReload = false
                         hasLoadedPage = false
                         hasError = false
                         cacheClearTrigger++
