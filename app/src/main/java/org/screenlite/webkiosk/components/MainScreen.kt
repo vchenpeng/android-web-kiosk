@@ -13,21 +13,25 @@ fun MainScreen(
     onDismissSplash: () -> Unit,
 ) {
     val context = LocalContext.current
-    var url by remember { mutableStateOf("about:blank") }
+    var url by remember { mutableStateOf<String?>(null) }
     val kioskSettings = remember { KioskSettingsFactory.get(context) }
 
     LaunchedEffect(Unit) {
         kioskSettings.getStartUrl().collect { newUrl ->
-            url = newUrl
+            if (newUrl.isNotBlank()) {
+                url = newUrl
+            }
         }
     }
 
-    key(url) {
-        WebViewComponent(
-            url = url,
-            activity = activity,
-            modifier = modifier,
-            onDismissSplash = onDismissSplash,
-        )
+    url?.let { startUrl ->
+        key(startUrl) {
+            WebViewComponent(
+                url = startUrl,
+                activity = activity,
+                modifier = modifier,
+                onDismissSplash = onDismissSplash,
+            )
+        }
     }
 }
