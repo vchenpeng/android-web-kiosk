@@ -59,7 +59,7 @@ fun WebViewComponent(
     var retryCount by remember { mutableIntStateOf(0) }
     var retryTrigger by remember { mutableIntStateOf(0) }
     var cacheClearTrigger by remember { mutableIntStateOf(0) }
-    var lastCacheClearNonce by remember { mutableLongStateOf(-1L) }
+    var lastCacheClearNonce by remember { mutableStateOf(-1L) }
     var splashDismissed by remember { mutableStateOf(false) }
     var splashDismissRequested by remember { mutableStateOf(false) }
     val splashShownAtMs = remember { SystemClock.elapsedRealtime() }
