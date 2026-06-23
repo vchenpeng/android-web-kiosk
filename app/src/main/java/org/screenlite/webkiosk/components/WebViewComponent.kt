@@ -13,6 +13,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,8 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.screenlite.webkiosk.app.WebViewCacheCleaner
 import org.screenlite.webkiosk.app.WebViewManager
@@ -184,6 +187,23 @@ fun WebViewComponent(
                     true
                 } catch (e: Exception) {
                     Log.e(TAG, "setEntryUrl() failed: $normalized", e)
+                    false
+                }
+            }
+
+            @JavascriptInterface
+            fun clearCache(): Boolean {
+                return try {
+                    val activity = context as? ComponentActivity ?: return false
+                    activity.runOnUiThread {
+                        Log.d(TAG, "JS called clearCache()")
+                        activity.lifecycleScope.launch {
+                            kioskSettings.requestCacheClear()
+                        }
+                    }
+                    true
+                } catch (e: Exception) {
+                    Log.e(TAG, "clearCache() failed", e)
                     false
                 }
             }
