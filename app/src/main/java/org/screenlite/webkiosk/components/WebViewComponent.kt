@@ -270,6 +270,7 @@ fun WebViewComponent(
                     }
                 }
                 Lifecycle.Event.ON_PAUSE -> webViewManager.onPause()
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
