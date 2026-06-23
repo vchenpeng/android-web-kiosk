@@ -54,6 +54,16 @@ class WebViewManager(
         currentWebView = null
     }
 
+    fun onPause() {
+        currentWebView?.onPause()
+        currentWebView?.pauseTimers()
+    }
+
+    fun onResume() {
+        currentWebView?.onResume()
+        currentWebView?.resumeTimers()
+    }
+
     private fun injectSpeechSynthesisPolyfill(webView: WebView) {
         webView.evaluateJavascript(SpeechSynthesisPolyfill.SCRIPT, null)
     }

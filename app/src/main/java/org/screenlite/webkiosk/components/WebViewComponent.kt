@@ -26,7 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -50,6 +53,7 @@ fun WebViewComponent(
     onDismissSplash: () -> Unit,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val kioskSettings = remember { KioskSettingsFactory.get(context) }
 
     var isLoading by remember { mutableStateOf(true) }
@@ -60,6 +64,7 @@ fun WebViewComponent(
     var retryTrigger by remember { mutableIntStateOf(0) }
     var cacheClearTrigger by remember { mutableIntStateOf(0) }
     var lastCacheClearNonce by remember { mutableStateOf(-1L) }
+    var pendingCacheClear by remember { mutableStateOf(false) }
     var splashDismissed by remember { mutableStateOf(false) }
     var splashDismissRequested by remember { mutableStateOf(false) }
     val splashShownAtMs = remember { SystemClock.elapsedRealtime() }
@@ -237,12 +242,38 @@ fun WebViewComponent(
             if (nonce > 0L && nonce != lastCacheClearNonce) {
                 lastCacheClearNonce = nonce
                 Log.d(TAG, "Cache clear requested (nonce=$nonce)")
-                WebViewCacheCleaner.clearAll(context)
-                hasLoadedPage = false
-                hasError = false
-                cacheClearTrigger++
+                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    WebViewCacheCleaner.clearAll(context)
+                    hasLoadedPage = false
+                    hasError = false
+                    cacheClearTrigger++
+                } else {
+                    Log.d(TAG, "Activity not in foreground, deferring cache clear until resume")
+                    pendingCacheClear = true
+                }
             }
         }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    webViewManager.onResume()
+                    if (pendingCacheClear) {
+                        Log.d(TAG, "Applying deferred cache clear on resume")
+                        pendingCacheClear = false
+                        WebViewCacheCleaner.clearAll(context)
+                        hasLoadedPage = false
+                        hasError = false
+                        cacheClearTrigger++
+                    }
+                }
+                Lifecycle.Event.ON_PAUSE -> webViewManager.onPause()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(hasError, retryTrigger) {

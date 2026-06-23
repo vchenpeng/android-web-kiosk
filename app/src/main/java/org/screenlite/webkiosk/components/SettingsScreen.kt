@@ -40,9 +40,6 @@ fun SettingsScreen() {
     var idleBrightnessError by remember { mutableStateOf<String?>(null) }
     var activeBrightnessError by remember { mutableStateOf<String?>(null) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
-    var cacheClearedMessage by remember { mutableStateOf(false) }
-
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val tabs = listOf("General", "Display", "Brightness", "Others")
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -56,13 +53,6 @@ fun SettingsScreen() {
         activeBrightness = kioskSettings.getActiveBrightness().first().toString()
     }
 
-    LaunchedEffect(cacheClearedMessage) {
-        if (cacheClearedMessage) {
-            snackbarHostState.showSnackbar(context.getString(R.string.settings_clear_cache_success))
-            cacheClearedMessage = false
-        }
-    }
-
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
@@ -73,7 +63,7 @@ fun SettingsScreen() {
                     showClearCacheDialog = false
                     (context as? ComponentActivity)?.lifecycleScope?.launch {
                         kioskSettings.requestCacheClear()
-                        cacheClearedMessage = true
+                        (context as? ComponentActivity)?.finish()
                     }
                 }) {
                     Text(stringResource(R.string.settings_clear_cache_confirm))
@@ -88,7 +78,6 @@ fun SettingsScreen() {
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineLarge) },
