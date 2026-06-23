@@ -23,7 +23,7 @@ fun KioskSplashOverlay(modifier: Modifier = Modifier) {
             painter = painterResource(R.drawable.welcome),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds,
+            contentScale = ContentScale.Fit,
             alignment = Alignment.Center
         )
     }

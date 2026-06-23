@@ -67,7 +67,10 @@ fun WebViewComponent(
     var pendingCacheReload by remember { mutableStateOf(false) }
     var splashDismissed by remember { mutableStateOf(false) }
     var splashDismissRequested by remember { mutableStateOf(false) }
-    val splashShownAtMs = remember { SystemClock.elapsedRealtime() }
+    val splashShownAtMs = remember(activity) {
+        (activity as? org.screenlite.webkiosk.MainActivity)?.splashController?.shownAtMs
+            ?: SystemClock.elapsedRealtime()
+    }
 
     val dismissSplash = remember(onDismissSplash) {
         {

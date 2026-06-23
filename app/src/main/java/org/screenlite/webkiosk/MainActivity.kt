@@ -51,7 +51,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         splashController = SplashController()
-        installSplashScreen().setKeepOnScreenCondition { splashController.keepOnScreen }
+        // 系统 Splash 在首帧绘制后立即退出，避免挡住 Compose 的 KioskSplashOverlay
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         FullScreenHelper.enableImmersiveMode(this.window)
