@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -49,10 +50,12 @@ class MainActivity : ComponentActivity() {
     lateinit var splashController: SplashController
         private set
 
+    @Volatile
+    var isComposeReady: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         splashController = SplashController()
-        // 系统 Splash 在首帧绘制后立即退出，避免挡住 Compose 的 KioskSplashOverlay
-        installSplashScreen()
+        installSplashScreen().setKeepOnScreenCondition { !isComposeReady }
         super.onCreate(savedInstanceState)
 
         FullScreenHelper.enableImmersiveMode(this.window)
@@ -102,6 +105,10 @@ fun AppContent(unlockHandler: TapUnlockHandler, activity: MainActivity) {
     val idleController = remember { activity.idleController }
     val isIdleMode by idleController.isIdleMode.collectAsState()
     val splashVisible by activity.splashController.visible
+
+    SideEffect {
+        activity.isComposeReady = true
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
