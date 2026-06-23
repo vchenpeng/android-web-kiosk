@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,7 +44,7 @@ fun SettingsScreen() {
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val tabs = listOf("General", "Display", "Brightness")
+    val tabs = listOf("General", "Display", "Brightness", "Others")
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -122,7 +123,6 @@ fun SettingsScreen() {
                     onCheckIntervalChange = { checkIntervalSeconds = it },
                     checkIntervalError = checkIntervalError,
                     onCheckIntervalErrorChange = { checkIntervalError = it },
-                    onClearCacheClick = { showClearCacheDialog = true }
                 )
                 1 -> DisplaySettingsTab(
                     rotation = rotation,
@@ -141,6 +141,9 @@ fun SettingsScreen() {
                     activeBrightnessError = activeBrightnessError,
                     onIdleBrightnessErrorChange = { idleBrightnessError = it },
                     onActiveBrightnessErrorChange = { activeBrightnessError = it }
+                )
+                3 -> OtherSettingsTab(
+                    onClearCacheClick = { showClearCacheDialog = true }
                 )
             }
 
@@ -205,7 +208,6 @@ fun GeneralSettingsTab(
     onCheckIntervalChange: (String) -> Unit,
     checkIntervalError: String?,
     onCheckIntervalErrorChange: (String?) -> Unit,
-    onClearCacheClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -241,18 +243,31 @@ fun GeneralSettingsTab(
             isError = checkIntervalError != null,
             supportingText = checkIntervalError ?: stringResource(R.string.settings_check_interval_supporting)
         )
+    }
+}
 
-        Spacer(Modifier.height(32.dp))
+@Composable
+fun OtherSettingsTab(
+    onClearCacheClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 48.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Spacer(Modifier.height(24.dp))
 
         Text(
             text = stringResource(R.string.settings_clear_cache_label),
             style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.settings_clear_cache_desc),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Color.White,
         )
         Spacer(Modifier.height(16.dp))
         FocusableButton(

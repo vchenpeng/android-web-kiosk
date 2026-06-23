@@ -35,6 +35,6 @@ fun FocusableButton(
         ),
         shape = RoundedCornerShape(8.dp)
     ) {
-        Text(text, modifier = Modifier.padding(horizontal = 8.dp))
+        Text(text, modifier = Modifier.padding(horizontal = 8.dp), color = Color.White)
     }
 }

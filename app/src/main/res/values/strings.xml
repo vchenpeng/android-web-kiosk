@@ -34,7 +34,7 @@
     <string name="settings_clear_cache_label">Web Cache</string>
     <string name="settings_clear_cache_desc">Clear cached pages, cookies, and local storage, then reload the kiosk page from the server.</string>
     <string name="settings_clear_cache_button">Clear Cache</string>
-    <string name="settings_clear_cache_dialog_title">Clear web cache?</string>
+    <string name="settings_clear_cache_dialog_title">Clear cache?</string>
     <string name="settings_clear_cache_dialog_message">This removes cached pages, cookies, and website storage. The kiosk page will reload from the server.</string>
     <string name="settings_clear_cache_confirm">Clear</string>
     <string name="settings_clear_cache_success">Cache cleared. Reloading page…</string>
