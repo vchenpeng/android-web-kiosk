@@ -132,12 +132,6 @@ fun WebViewComponent(
         }
     }
 
-    LaunchedEffect(hasLoadedPage) {
-        if (hasLoadedPage && !splashDismissed) {
-            requestDismissSplash()
-        }
-    }
-
     val kioskInterface = remember(dismissSplash) {
         object {
             @JavascriptInterface
