@@ -14,9 +14,7 @@ import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -78,15 +75,6 @@ fun WebViewComponent(
     }
 
     val keyboardPan = remember { KeyboardPanController() }
-    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
-
-    LaunchedEffect(imeBottom) {
-        if (imeBottom == 0) {
-            keyboardPan.clear()
-        } else {
-            keyboardPan.recalculate(context)
-        }
-    }
 
     val dismissSplash = remember(onDismissSplash) {
         {
@@ -355,8 +343,6 @@ fun WebViewComponent(
         }
     }
 
-    val keyboardPanPx = keyboardPan.panPx
-
     key(retryTrigger, cacheClearTrigger) {
         AndroidView(
             modifier = modifier.fillMaxSize(),
@@ -369,13 +355,12 @@ fun WebViewComponent(
 
                 webView.settings.javaScriptEnabled = true
                 webView.addJavascriptInterface(kioskInterface, "NativeBridge")
-                keyboardPan.webView = webView
+                keyboardPan.attachWebView(webView)
 
                 webView
             },
             update = { webView ->
-                keyboardPan.webView = webView
-                webView.translationY = -keyboardPanPx.toFloat()
+                keyboardPan.attachWebView(webView)
 
                 if (webView.url != url) {
                     Log.d(TAG, "Loading new URL: $url")

@@ -3,22 +3,30 @@ package org.screenlite.webkiosk.app
 import android.content.Context
 import android.util.Log
 import android.webkit.WebView
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
 class KeyboardPanController {
     private val tag = "KeyboardPanController"
 
-    var panPx by mutableIntStateOf(0)
-        private set
-
-    var webView: WebView? = null
-
+    private var webView: WebView? = null
     private var lastInputBottomCss = 0.0
     private var lastViewportHeightCss = 0.0
+    private var currentPanPx = 0
+
+    fun attachWebView(webView: WebView) {
+        this.webView = webView
+        webView.translationY = -currentPanPx.toFloat()
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { _, insets ->
+            val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            if (imeBottom == 0) {
+                clear()
+            } else if (lastViewportHeightCss > 0.0) {
+                recalculate(webView.context)
+            }
+            insets
+        }
+    }
 
     fun onInputFocus(inputBottomCss: Double, viewportHeightCss: Double, context: Context) {
         lastInputBottomCss = inputBottomCss
@@ -38,7 +46,7 @@ class KeyboardPanController {
             ?.bottom ?: 0
 
         if (imeBottom == 0) {
-            clear()
+            applyPan(0)
             return
         }
 
@@ -47,20 +55,26 @@ class KeyboardPanController {
         val availablePx = webViewHeight - imeBottom
         val paddingPx = 16f * context.resources.displayMetrics.density
         val overflow = (inputBottomPx - availablePx + paddingPx).coerceAtLeast(0f)
-        panPx = overflow.toInt()
+        applyPan(overflow.toInt())
 
         Log.d(
             tag,
-            "Pan inputBottom=${inputBottomPx.toInt()} available=$availablePx ime=$imeBottom pan=$panPx"
+            "Pan inputBottom=${inputBottomPx.toInt()} available=$availablePx ime=$imeBottom pan=$currentPanPx"
         )
     }
 
     fun clear() {
         lastInputBottomCss = 0.0
         lastViewportHeightCss = 0.0
-        if (panPx != 0) {
+        applyPan(0)
+    }
+
+    private fun applyPan(panPx: Int) {
+        if (currentPanPx == panPx) return
+        currentPanPx = panPx
+        webView?.translationY = -panPx.toFloat()
+        if (panPx == 0) {
             Log.d(tag, "Clear keyboard pan")
         }
-        panPx = 0
     }
 }
