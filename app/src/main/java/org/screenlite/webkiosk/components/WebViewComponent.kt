@@ -14,7 +14,9 @@ import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -36,6 +39,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.screenlite.webkiosk.app.KeyboardPanController
 import org.screenlite.webkiosk.app.WebViewCacheCleaner
 import org.screenlite.webkiosk.app.WebViewManager
 import org.screenlite.webkiosk.data.KioskSettingsFactory
@@ -71,6 +75,17 @@ fun WebViewComponent(
     val splashShownAtMs = remember(activity) {
         (activity as? org.screenlite.webkiosk.MainActivity)?.splashController?.shownAtMs
             ?: SystemClock.elapsedRealtime()
+    }
+
+    val keyboardPan = remember { KeyboardPanController() }
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+
+    LaunchedEffect(imeBottom) {
+        if (imeBottom == 0) {
+            keyboardPan.clear()
+        } else {
+            keyboardPan.recalculate(context)
+        }
     }
 
     val dismissSplash = remember(onDismissSplash) {
@@ -133,8 +148,22 @@ fun WebViewComponent(
         }
     }
 
-    val kioskInterface = remember(dismissSplash) {
+    val kioskInterface = remember(keyboardPan) {
         object {
+            @JavascriptInterface
+            fun reportInputFocus(inputBottomCss: Double, viewportHeightCss: Double) {
+                (context as? Activity)?.runOnUiThread {
+                    keyboardPan.onInputFocus(inputBottomCss, viewportHeightCss, context)
+                }
+            }
+
+            @JavascriptInterface
+            fun clearInputFocus() {
+                (context as? Activity)?.runOnUiThread {
+                    keyboardPan.clear()
+                }
+            }
+
             @JavascriptInterface
             fun hideSplash() {
                 (context as? Activity)?.runOnUiThread {
@@ -326,6 +355,8 @@ fun WebViewComponent(
         }
     }
 
+    val keyboardPanPx = keyboardPan.panPx
+
     key(retryTrigger, cacheClearTrigger) {
         AndroidView(
             modifier = modifier.fillMaxSize(),
@@ -338,10 +369,14 @@ fun WebViewComponent(
 
                 webView.settings.javaScriptEnabled = true
                 webView.addJavascriptInterface(kioskInterface, "NativeBridge")
+                keyboardPan.webView = webView
 
                 webView
             },
             update = { webView ->
+                keyboardPan.webView = webView
+                webView.translationY = -keyboardPanPx.toFloat()
+
                 if (webView.url != url) {
                     Log.d(TAG, "Loading new URL: $url")
                     webViewManager.loadUrlBypassingCache(webView, url)
