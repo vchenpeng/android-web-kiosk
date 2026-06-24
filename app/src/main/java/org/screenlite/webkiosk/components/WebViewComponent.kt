@@ -14,6 +14,8 @@ import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -327,7 +329,9 @@ fun WebViewComponent(
 
     key(retryTrigger, cacheClearTrigger) {
         AndroidView(
-            modifier = modifier,
+            modifier = modifier
+                .fillMaxSize()
+                .imePadding(),
             factory = {
                 Log.d(TAG, "Creating WebView (rotation=$rotation, cacheClear=$cacheClearTrigger)")
                 val webView = webViewManager.createWebView(rotation)

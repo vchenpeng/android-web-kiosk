@@ -125,6 +125,28 @@ class WebViewManager(
         webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
     }
 
+    private fun injectKeyboardScrollHelper(webView: WebView) {
+        webView.evaluateJavascript(
+            """
+            (function() {
+                if (window.__kioskKeyboardScrollHelper) return;
+                window.__kioskKeyboardScrollHelper = true;
+                document.addEventListener('focusin', function(e) {
+                    var target = e.target;
+                    if (!target || !target.tagName) return;
+                    var tag = target.tagName.toLowerCase();
+                    if (tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable) {
+                        setTimeout(function() {
+                            target.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'smooth'});
+                        }, 300);
+                    }
+                }, true);
+            })();
+            """.trimIndent(),
+            null
+        )
+    }
+
     private fun WebView.setupWebViewListeners() {
         webViewClient = object : WebViewClient() {
             private var mainFrameFailed = false
@@ -133,6 +155,7 @@ class WebViewManager(
                 super.onPageStarted(view, url, favicon)
                 mainFrameFailed = false
                 injectSpeechSynthesisPolyfill(view)
+                injectKeyboardScrollHelper(view)
                 view.visibility = View.INVISIBLE
                 onPageLoading(true)
             }
@@ -140,6 +163,7 @@ class WebViewManager(
             override fun onPageFinished(view: WebView, url: String?) {
                 super.onPageFinished(view, url)
                 injectSpeechSynthesisPolyfill(view)
+                injectKeyboardScrollHelper(view)
                 ViewportMetaInjector.inject(view)
                 view.postDelayed({
                     view.visibility = View.VISIBLE
