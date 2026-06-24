@@ -62,7 +62,7 @@
             android:configChanges="orientation|screenSize"
             android:focusable="true"
             android:focusableInTouchMode="true"
-            android:windowSoftInputMode="adjustResize|stateHidden"
+            android:windowSoftInputMode="adjustPan|stateHidden"
             android:theme="@style/Theme.ScreenliteWebKiosk.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -17,7 +17,8 @@ object FullScreenHelper {
         }
     }
     private fun enableImmersiveModeApi30(window: Window) {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // decorFitsSystemWindows=true 才能让 adjustPan 在键盘遮挡时整体上移焦点，而不是缩小 WebView
+        WindowCompat.setDecorFitsSystemWindows(window, true)
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.hide(WindowInsetsCompat.Type.systemBars())
         controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
