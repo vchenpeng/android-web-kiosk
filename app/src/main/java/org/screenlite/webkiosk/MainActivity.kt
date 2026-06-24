@@ -20,7 +20,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -34,6 +36,8 @@ import org.screenlite.webkiosk.app.FullScreenHelper
 import org.screenlite.webkiosk.app.IdleBrightnessController
 import org.screenlite.webkiosk.app.NotificationPermissionHelper
 import org.screenlite.webkiosk.app.SplashController
+import org.screenlite.webkiosk.app.SplashImageCache
+import org.screenlite.webkiosk.app.SplashImageUrls
 import org.screenlite.webkiosk.app.StayOnTopServiceStarter
 import org.screenlite.webkiosk.app.TapUnlockHandler
 import org.screenlite.webkiosk.components.KioskSplashOverlay
@@ -128,6 +132,22 @@ fun AppContent(unlockHandler: TapUnlockHandler, activity: MainActivity) {
 
     val isTv = isTvDevice()
     val dismissSplash = remember(activity) { { activity.dismissSplash() } }
+    val kioskSettings = remember { KioskSettingsFactory.get(context) }
+    var startUrl by remember { mutableStateOf<String?>(null) }
+    val splashCacheFile = remember(context) { SplashImageCache.getCachedFile(context) }
+
+    LaunchedEffect(Unit) {
+        kioskSettings.getStartUrl().collect { url ->
+            if (url.isNotBlank()) {
+                startUrl = url
+            }
+        }
+    }
+
+    LaunchedEffect(startUrl) {
+        val remoteUrl = startUrl?.let(SplashImageUrls::remoteWelcomeUrl) ?: return@LaunchedEffect
+        SplashImageCache.prefetch(context, remoteUrl)
+    }
 
     Box(Modifier.fillMaxSize()) {
         MainScreen(
@@ -149,7 +169,9 @@ fun AppContent(unlockHandler: TapUnlockHandler, activity: MainActivity) {
         }
 
         if (splashVisible) {
-            KioskSplashOverlay()
+            KioskSplashOverlay(
+                cachedImageFile = splashCacheFile.takeIf { it.exists() },
+            )
         }
 
         val idleFocusRequester = remember { FocusRequester() }
